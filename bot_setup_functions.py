@@ -151,35 +151,18 @@ def mapping_maze():
     MazeFinished = False
     
     while not MazeFinished:
-        # Atualiza o labirinto
-        walls = dfso.actualState.walls
-        #verificar qual direção tem paredes
-        if 0 in walls:
-            #adicionar novos nos ao grafo correspondendo as direções que não tem paredes
-            for i in range(4):
-                if walls[i] == 0 and i == 0:
-                    #tenho caminho para o norte
-                    next_position = [dfso.actualState.x - 1, dfso.actualState.y]
-                    new_node = Node(position=next_position, name=dfso.actualState.name + , path=dfso.actualState.path + directions[i])
 
-                    #verificar se o nó já existe
-                
-                    
-                    
-                    
-                    
-                    # Adicionar o nó correspondente à direção
-                    
-                    G.add_node(new_node)
-                    G.add_edge(dfso.actualState, new_node)
-
-                
-                   
+        # {Fazer até que todas as direções possíveis sejam visitadas}
         
-        else:
-            print("Paredes em todas as direções, não é possível avançar.")
-            break
-                
+        # verificar a exitência de caminhos mapeados não visitados (atualiza dfso)
+        # [Existem Caminhos]
+            # se mover de acordo com o algoritmo de busca em profundidade (atualiza dfso)
+
+
+        # [Não existem caminhos]
+            #mapear novos caminhos (atualiza dfso)
+        
+        break          
 
         
     
