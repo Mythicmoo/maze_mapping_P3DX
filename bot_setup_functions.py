@@ -1,6 +1,5 @@
 from controller import Robot
-from maze_nodes import Node
-from collections import deque
+from maze_nodes import Node, Dfso
 import networkx as nx
 import matplotlib.pyplot as plt
 import numpy as np
@@ -8,6 +7,7 @@ import numpy as np
 # Matriz do labirinto (definições iniciais)
 MAZE = np.array(np.zeros((15, 15)))
 position = [7 ,7 ,'E']
+
 
 def set_speed(left, right):
     left_motor.setVelocity(left)
@@ -73,6 +73,7 @@ def probe_for_walls():
     rotate(-90 * (current_dir_index - directions.index(position[2])) + 2.3)  #2 é o erro
     return wall_detection
 
+
 def update_maze(position=position, maze=MAZE):
     """
     Atualiza a matriz do labirinto com as informações de parede obtidas.
@@ -97,6 +98,14 @@ def update_maze(position=position, maze=MAZE):
     print(MAZE)
 
     return walls
+
+def show_mazegraph(G):
+    pos = {(x, y): (y, -x) for x, y in G.nodes()}
+    plt.figure(figsize=(4,4))
+    nx.draw(G, pos, with_labels=True, node_color='lightblue', node_size=200, edge_color='gray')
+    plt.title("Grafo de Grid 2D com conexão ao nó do Norte")
+    plt.axis("equal")
+    plt.show()
 
 def move_on_edge(direction):
     """
@@ -130,39 +139,68 @@ def move_on_edge(direction):
     # Parar o robô
     set_speed(0, 0)
 
-def mapping_maze():
+def mapping_maze(MAZE=MAZE, position=position):
     '''mapeia o labirinto e retorna um grafo com as informações do labirinto'''
 
     # Inicializa o grafo
-    G = nx.Graph() 
+    maze_dimensions = MAZE.shape
+    G = nx.grid_2d_graph(maze_dimensions[0], maze_dimensions[1])
 
     #definir o no inicial ou no raiz
-    root_node = Node(position=position, name="R", walls=update_maze())
-    G.add_node(root_node)
+    root_node = Node(position=position, path='', walls=update_maze())
+    G.nodes[(root_node.x, root_node.y)]["customNode"] = root_node
 
     # Cria o objeto de interação com o DSF
-    dfso = {"visitedStates": deque().append(root_node),
-            "visibleSates": deque(),
-            "actualState": root_node}
+    dfso = Dfso()
+    dfso.actualState = root_node
+    dfso.visitedStates.append(root_node.name)
     
+
     #direções absolutas
     directions = ['N', 'E', 'S', 'W']
         
     MazeFinished = False
-    
-    while not MazeFinished:
 
-        # {Fazer até que todas as direções possíveis sejam visitadas}
-        
+    print(G.nodes[(7,7)]["customNode"])
+
+    '''while not MazeFinished:
+
+        # Fazer até que todas as direções possíveis sejam visitadas - Regime 1
+
         # verificar a exitência de caminhos mapeados não visitados (atualiza dfso)
-        # [Existem Caminhos]
-            # se mover de acordo com o algoritmo de busca em profundidade (atualiza dfso)
+        for node in dfso.mappedStates:
+            if node.name not in dfso.visitedStates:
+                #caminho mapeado não visitado
+                # se mover de acordo com o algoritmo de busca em profundidade (atualiza dfso)
 
 
-        # [Não existem caminhos]
-            #mapear novos caminhos (atualiza dfso)
+
+
+                pass
+            else:
+                #caminho mapeado visitado
+                # mapear novos caminhos (atualiza dfso)
+                walls = update_maze()
+                #adicionar novos nós ao grafo correspondendo as direções que não tem paredes
+                for i in range(4):
+                    
+                    if walls[i] == 0 and i == 0 and G.nodes[(dfso.actualState.x, dfso.actualState.y)]["customNode"].name not in dfso.visitedStates: 
+                        
+                        #tenho caminho não visitado para o norte                        
+                        next_position = [dfso.actualState.x - 1, dfso.actualState.y]
+                        new_node = Node(position=next_position, path=dfso.actualState.path + directions[i])             
+                        G.nodes[(new_node.x, new_node.y)]["customNode"] = new_node
+                        G.add_edge((dfso.actualState.x, dfso.actualState.y),(new_node.x, new_node.y)) 
+                    
+                   
+
+
+                pass
+                
+
+        # Buscar um nó analisado guardado e se mover até ele (atualiza dfso) - Regime 2
         
-        break          
+        break'''          
 
         
     
