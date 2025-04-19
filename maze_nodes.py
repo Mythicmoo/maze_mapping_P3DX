@@ -17,6 +17,9 @@ class Node:
     def __str__(self):
         return f"Node[({self.x}, {self.y}) ; {self.path} ; {self.neighbours} ; {self.walls}]"
     
+
+
+
 class Dfso:
     def __init__(self):
         self.visitedStates = []

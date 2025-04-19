@@ -12,7 +12,9 @@ move_on_edge('S')
 update_maze()
 move_on_edge('N')'''
 
-mapping_maze()
+move_on_edge('S')
+move_on_edge('S')
+move_to_node('SS', 'ENWW')
 
 
 

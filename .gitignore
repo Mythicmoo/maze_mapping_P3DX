@@ -1,2 +1,35 @@
-__pycache__
-save.txt
+# Bytecode do Python
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Ambientes virtuais
+venv/
+.env/
+.venv/
+ENV/
+env/
+
+# Arquivos de log
+*.log
+
+# Configurações do editor (VSCode, PyCharm etc)
+.vscode/
+.idea/
+
+# Arquivos do sistema
+.DS_Store
+Thumbs.db
+
+# Arquivos temporários
+*.swp
+*.bak
+*.tmp
+
+# Dependências
+*.egg-info/
+dist/
+build/
+
+# Jupyter Notebooks checkpoints
+.ipynb_checkpoints/

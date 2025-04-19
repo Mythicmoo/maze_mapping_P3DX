@@ -1,0 +1,29 @@
+for node in dfso.mappedStates:
+            if node.name not in dfso.visitedStates:
+                #caminho mapeado não visitado
+                # se mover de acordo com o algoritmo de busca em profundidade (atualiza dfso)
+
+
+
+
+                pass
+            else:
+                #caminho mapeado visitado
+                # mapear novos caminhos (atualiza dfso)
+                walls = update_maze()
+                #adicionar novos nós ao grafo correspondendo as direções que não tem paredes
+                for i in range(4):
+                    
+                    if walls[i] == 0 and i == 0 and G.nodes[(dfso.actualState.x, dfso.actualState.y)]["customNode"].name not in dfso.visitedStates: 
+                        
+                        #tenho caminho não visitado para o norte                        
+                        next_position = [dfso.actualState.x - 1, dfso.actualState.y]
+                        #definir as informações de nós vizinhos 
+                        new_node = Node(position=next_position, path=dfso.actualState.path + directions[i])             
+                        G.nodes[(new_node.x, new_node.y)]["customNode"] = new_node
+                        G.add_edge((dfso.actualState.x, dfso.actualState.y),(new_node.x, new_node.y)) 
+                    
+                   
+
+
+                pass

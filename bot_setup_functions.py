@@ -139,6 +139,30 @@ def move_on_edge(direction):
     # Parar o robô
     set_speed(0, 0)
 
+def move_to_node(no_atual, destino):
+    '''Move o robo para o nó destino especificado.
+      O nó atual é o caminho que o robo usou para chegar ao nó atual.
+      O nó destino é o caminho que o usará para visitar o seu destino.
+    '''
+    caminho_para_centro = no_atual[::-1]
+    for i in caminho_para_centro:
+    
+        if i == 'N':
+            move_on_edge('S')
+        elif i == 'E':
+            move_on_edge('W')
+        elif i == 'S':
+            move_on_edge('N')
+        elif i == 'W':
+            move_on_edge('E')
+        else:
+            print('Erro: direção inválida')
+            break 
+    
+    destino_final = destino
+    for i in destino_final:
+        move_on_edge(i)
+
 def mapping_maze(MAZE=MAZE, position=position):
     '''mapeia o labirinto e retorna um grafo com as informações do labirinto'''
 
@@ -163,44 +187,46 @@ def mapping_maze(MAZE=MAZE, position=position):
 
     print(G.nodes[(7,7)]["customNode"])
 
-    '''while not MazeFinished:
+    #<--- CICLO DE MAPEAMENTO --->
+    while not MazeFinished:
+        print('Ciclo de mapeamento')
 
-        # Fazer até que todas as direções possíveis sejam visitadas - Regime 1
-
-        # verificar a exitência de caminhos mapeados não visitados (atualiza dfso)
-        for node in dfso.mappedStates:
-            if node.name not in dfso.visitedStates:
-                #caminho mapeado não visitado
-                # se mover de acordo com o algoritmo de busca em profundidade (atualiza dfso)
-
-
-
-
-                pass
-            else:
-                #caminho mapeado visitado
-                # mapear novos caminhos (atualiza dfso)
-                walls = update_maze()
-                #adicionar novos nós ao grafo correspondendo as direções que não tem paredes
-                for i in range(4):
-                    
-                    if walls[i] == 0 and i == 0 and G.nodes[(dfso.actualState.x, dfso.actualState.y)]["customNode"].name not in dfso.visitedStates: 
-                        
-                        #tenho caminho não visitado para o norte                        
-                        next_position = [dfso.actualState.x - 1, dfso.actualState.y]
-                        new_node = Node(position=next_position, path=dfso.actualState.path + directions[i])             
-                        G.nodes[(new_node.x, new_node.y)]["customNode"] = new_node
-                        G.add_edge((dfso.actualState.x, dfso.actualState.y),(new_node.x, new_node.y)) 
-                    
-                   
-
-
-                pass
-                
-
-        # Buscar um nó analisado guardado e se mover até ele (atualiza dfso) - Regime 2
+        #<--- CICLO DE EXPLORAÇÂO --->
         
-        break'''          
+        # Checar se exitem caminhos explorados
+            # if True (Há algum caminho explorado):
+                
+                # Ir para o ciclo de visitação
+
+            # else (não há caminhos explorados):
+                
+                # explorar novos caminhos                
+                # if True (há caminhos novos):
+                    # ir para o ciclo de visitação
+                
+                # else (não há caminhos novos):
+                    
+                    # buscar estados guardados
+                    # if True (há estados guardados):
+                        # vai para o ciclo de viagem
+                    
+                    # else (não há estados guardados):
+                        # parar o robô e finalizar o programa
+
+
+        #<--- CICLO DE VISITAÇÃO --->
+            # Escolhe um nó aleatório entre os explorados para poder visitar e os nós que sombram são guardados
+
+
+        #<--- CICLO DE VIAGEM --->
+            # Executa uma "viagem" ao estado guardado e o visita
+
+    
+
+
+
+        
+             
 
         
     
