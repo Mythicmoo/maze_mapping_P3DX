@@ -7,7 +7,7 @@ class Node:
         self.y = position[1]
         self.path = path # "NNSSENWW -> algo assim"
         self.walls = walls
-        self.neighbours = []
+        self.neighbours = set()
         self.name = f"Node({self.x},{self.y})"
     
 
@@ -17,8 +17,6 @@ class Node:
     def __str__(self):
         return f"Node[({self.x}, {self.y}) ; {self.path} ; {self.neighbours} ; {self.walls}]"
     
-
-
 
 class Dfso:
     def __init__(self):

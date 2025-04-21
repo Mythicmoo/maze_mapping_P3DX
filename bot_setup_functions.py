@@ -192,26 +192,47 @@ def mapping_maze(MAZE=MAZE, position=position):
         print('Ciclo de mapeamento')
 
         #<--- CICLO DE EXPLORAÇÂO --->
-        
         # Checar se exitem caminhos explorados
+        for neighbor in dfso.actualState.neighbors:
             # if True (Há algum caminho explorado):
-                
+            if neighbor.name not in dfso.visitedStates:
                 # Ir para o ciclo de visitação
-
+                break
+            
             # else (não há caminhos explorados):
+            else:                
+                # mapear novos caminhos
+                new_ways = False
+                walls = update_maze(position=position, maze=MAZE)
+                moves = [(-1, 0), (0, 1), (1, 0), (0, -1)]  # N, E, S, W
+                for i, (dx, dy) in enumerate(moves):
+                    if walls[i] == 0 and G.nodes[next_position]["customNode"].name not in dfso.visitedStates:
+                        
+                        next_position = [dfso.actualState.x + dx, dfso.actualState.y + dy]               
+                        new_node = Node(position=next_position, path=dfso.actualState.path + directions[i])
+                        
+                        dfso.actualState.neighbours.add(new_node)
+                        new_node.neighbours.add(dfso.actualState)
+
+                        G.nodes[(new_node.x, new_node.y)]["customNode"] = new_node
+                        G.add_edge((dfso.actualState.x, dfso.actualState.y), (new_node.x, new_node.y))
+
+                        new_ways = True
                 
-                # explorar novos caminhos                
-                # if True (há caminhos novos):
+            
+                # if True (Caminhos novos mapeados com sucesso):
+                if new_ways:
                     # ir para o ciclo de visitação
-                
+                    pass
                 # else (não há caminhos novos):
-                    
+                else:                   
                     # buscar estados guardados
                     # if True (há estados guardados):
                         # vai para o ciclo de viagem
                     
                     # else (não há estados guardados):
                         # parar o robô e finalizar o programa
+                    pass
 
 
         #<--- CICLO DE VISITAÇÃO --->
@@ -222,19 +243,6 @@ def mapping_maze(MAZE=MAZE, position=position):
             # Executa uma "viagem" ao estado guardado e o visita
 
     
-
-
-
-        
-             
-
-        
-    
-
-
-
-    
-
 # Configurações iniciais do robô 
 robot = Robot()
 timestep = int(robot.getBasicTimeStep())   
@@ -257,3 +265,5 @@ so7 = robot.getDevice('so7')
 sensores = [so0, so1, so2, so3, so4, so5, so6, so7]
 for sensor in sensores:
     sensor.enable(timestep)
+
+
