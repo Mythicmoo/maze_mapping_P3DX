@@ -22,9 +22,12 @@ class Dfso:
     def __init__(self):
         self.visitedStates = []
         self.visibleStates = deque()
-        self._mappedStates = set(self.visitedStates) | set(self.visibleStates)
+        self._mappedStates = None
         self.actualState = None
 
-        def get_mappedStates(self):
-            return self._mappedStates
+    def set_mappedStates(self):
+        self._mappedStates = set(self.visitedStates) | set(self.visibleStates)
+
+    def get_mappedStates(self):
+        return self._mappedStates
     

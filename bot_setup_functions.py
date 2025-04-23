@@ -81,7 +81,6 @@ def update_maze(position=position, maze=MAZE):
     # Atualiza a matriz do labirinto com as informações de parede
     directions = ['N', 'E', 'S', 'W']
     walls = probe_for_walls()
-    print(walls)
     for i in range(4):
         if walls[i] == 1:
             if directions[i] == 'N':
@@ -100,9 +99,17 @@ def update_maze(position=position, maze=MAZE):
     return walls
 
 def show_mazegraph(G):
+    
+    node_colors = []
+    for node in G.nodes():
+        if "customNode" in G.nodes[node]:
+            node_colors.append('orange')  # Cor para nós com objeto associado
+        else:
+            node_colors.append('lightblue')  # Cor padrão para outros nós
+
     pos = {(x, y): (y, -x) for x, y in G.nodes()}
     plt.figure(figsize=(4,4))
-    nx.draw(G, pos, with_labels=True, node_color='lightblue', node_size=200, edge_color='gray')
+    nx.draw(G, pos, with_labels=True, node_color=node_colors, node_size=200, edge_color='gray')
     plt.title("Grafo de Grid 2D com conexão ao nó do Norte")
     plt.axis("equal")
     plt.show()
@@ -168,7 +175,10 @@ def mapping_maze(MAZE=MAZE, position=position):
 
     # Inicializa o grafo
     maze_dimensions = MAZE.shape
-    G = nx.grid_2d_graph(maze_dimensions[0], maze_dimensions[1])
+    G = nx.Graph()
+    for x in range(maze_dimensions[0]):
+        for y in range(maze_dimensions[1]):
+            G.add_node((x, y))
 
     #definir o no inicial ou no raiz
     root_node = Node(position=position, path='', walls=update_maze())
@@ -182,6 +192,9 @@ def mapping_maze(MAZE=MAZE, position=position):
 
     #direções absolutas
     directions = ['N', 'E', 'S', 'W']
+
+    #contagem de ciclos
+    n = 0
         
     MazeFinished = False
 
@@ -192,25 +205,52 @@ def mapping_maze(MAZE=MAZE, position=position):
         print('Ciclo de mapeamento')
 
         #<--- CICLO DE EXPLORAÇÂO --->
-        # Checar se exitem caminhos explorados
-        for neighbor in dfso.actualState.neighbors:
-            # if True (Há algum caminho explorado):
-            if neighbor.name not in dfso.visitedStates:
-                # Ir para o ciclo de visitação
-                break
-            
-            # else (não há caminhos explorados):
-            else:                
-                # mapear novos caminhos
-                new_ways = False
-                walls = update_maze(position=position, maze=MAZE)
-                moves = [(-1, 0), (0, 1), (1, 0), (0, -1)]  # N, E, S, W
-                for i, (dx, dy) in enumerate(moves):
-                    if walls[i] == 0 and G.nodes[next_position]["customNode"].name not in dfso.visitedStates:
-                        
-                        next_position = [dfso.actualState.x + dx, dfso.actualState.y + dy]               
-                        new_node = Node(position=next_position, path=dfso.actualState.path + directions[i])
-                        
+        # Checar se exitem caminhos explorados        
+
+        if n == 0 :
+            new_ways = False
+        else:
+            for neighbor in dfso.actualState.neighbours:
+                # if True (Há algum caminho explorado):
+                if neighbor.name not in dfso.visitedStates:
+                    # Ir para o ciclo de visitação                
+                    new_ways = True
+                # else (não há caminhos explorados):
+                else:
+                    new_ways = False
+
+        if not new_ways:             
+            # mapear novos caminhos
+            walls = update_maze(position=position.copy(), maze=MAZE)
+            moves = [(-1, 0), (0, 1), (1, 0), (0, -1)]  # N, E, S, W
+            for i, (dx, dy) in enumerate(moves):
+                if walls[i] == 0:
+                    
+                    next_position = [dfso.actualState.x + dx, dfso.actualState.y + dy]
+                    
+                    try:
+                        if G.nodes[(next_position[0], next_position[1])]["customNode"].name not in dfso.visitedStates:
+                            
+
+                            new_node = Node(position=next_position, path=dfso.actualState.path + directions[i], walls=walls)
+                            
+                            #atualizar dfso
+                            dfso.visibleStates.append(new_node)
+                            dfso.set_mappedStates()
+                            dfso.actualState.neighbours.add(new_node)
+                            new_node.neighbours.add(dfso.actualState)
+
+                            G.nodes[(new_node.x, new_node.y)]["customNode"] = new_node
+                            G.add_edge((dfso.actualState.x, dfso.actualState.y), (new_node.x, new_node.y))
+
+                        new_ways = True
+                    except KeyError:
+
+                        new_node = Node(position=next_position, path=dfso.actualState.path + directions[i], walls=walls)
+                            
+                        #atualizar dfso
+                        dfso.visibleStates.append(new_node)
+                        dfso.set_mappedStates()
                         dfso.actualState.neighbours.add(new_node)
                         new_node.neighbours.add(dfso.actualState)
 
@@ -218,30 +258,46 @@ def mapping_maze(MAZE=MAZE, position=position):
                         G.add_edge((dfso.actualState.x, dfso.actualState.y), (new_node.x, new_node.y))
 
                         new_ways = True
-                
+                else:
+                    print('caminho bloquedo')
+
             
-                # if True (Caminhos novos mapeados com sucesso):
-                if new_ways:
-                    # ir para o ciclo de visitação
-                    pass
-                # else (não há caminhos novos):
-                else:                   
-                    # buscar estados guardados
+        
+            # if True (Caminhos novos mapeados com sucesso):
+            if new_ways:
+                # ir para o ciclo de visitação
+                break
+            # else (não há caminhos novos):
+            else:                   
+                # buscar estados guardados
+                for state in dfso.visibleStates:
                     # if True (há estados guardados):
+                    if state not in dfso.actualState.neighbours:                       
                         # vai para o ciclo de viagem
-                    
+                        pass
                     # else (não há estados guardados):
+                    else:            
                         # parar o robô e finalizar o programa
-                    pass
+                        MazeFinished = True
+        print('oi')
+        n = n + 1
+        break
+        
+        
 
 
-        #<--- CICLO DE VISITAÇÃO --->
+        '''#<--- CICLO DE VISITAÇÃO --->
             # Escolhe um nó aleatório entre os explorados para poder visitar e os nós que sombram são guardados
+            print('Ciclo de visitação')
+            break
 
 
         #<--- CICLO DE VIAGEM --->
-            # Executa uma "viagem" ao estado guardado e o visita
+            print('Ciclo de viagem')
+            # Executa uma "viagem" ao estado guardado e o visita'''
+        
 
+    return show_mazegraph(G)
     
 # Configurações iniciais do robô 
 robot = Robot()
@@ -258,7 +314,7 @@ so0 = robot.getDevice('so0')
 so1 = robot.getDevice('so1')
 so2 = robot.getDevice('so2')
 so3 = robot.getDevice('so3')
-so4 = robot.getDevice('so3')
+so4 = robot.getDevice('so4')
 so5 = robot.getDevice('so5')
 so6 = robot.getDevice('so6')
 so7 = robot.getDevice('so7')
