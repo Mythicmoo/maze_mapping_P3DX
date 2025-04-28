@@ -31,3 +31,6 @@ class Dfso:
     def get_mappedStates(self):
         return self._mappedStates
     
+
+'''
+{Node[(8,7) ; S ; {Node[(7,7) ;  ; set(...) ; [1, 0, 0, 1]]} ; [1, 0, 0, 1]], Node[(7,8) ; E ; {Node[(7,7) ;  ; set(...) ; [1, 0, 0, 1]]} ; [1, 0, 0, 1]]}'''
