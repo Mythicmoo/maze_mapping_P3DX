@@ -61,7 +61,7 @@ def probe_for_walls():
         probe = probe_direction()
 
         # Determinar se há uma parede à frente (critério ajustável conforme o sensor)
-        if probe[3] > 930 and probe[4] > 930:
+        if probe[3] > 930 or probe[4] > 930:
             wall_detection[current_dir_index] = 1  # Parede detectada
 
         # Atualizar a direção atual
@@ -264,10 +264,10 @@ def mapping_maze(MAZE=MAZE, position=position):
                         G.add_edge((dfso.actualState.x, dfso.actualState.y), (new_node.x, new_node.y))
 
                         new_ways = True
-                        show_mazegraph(G, dfso)
+                    
                 else:
                     print('caminho bloquedo')
-
+            show_mazegraph(G, dfso)
             
         
             # if True (Caminhos novos mapeados com sucesso):
@@ -275,14 +275,15 @@ def mapping_maze(MAZE=MAZE, position=position):
                 # ir para o ciclo de visitação
                 pass
             # else (não há caminhos novos):
-            else:                   
+            else:
+                print('não há caminhos novos')                
                 # buscar estados guardados
                 for state in dfso.visibleStates:
                     # if True (há estados guardados):
                     if state not in dfso.actualState.neighbours:                       
                         # vai para o ciclo de viagem
-                        Travel= True
-                        pass
+                        travel= True
+            
                     # else (não há estados guardados):
                     else:            
                         # parar o robô e finalizar o programa
@@ -294,14 +295,19 @@ def mapping_maze(MAZE=MAZE, position=position):
             # Escolhe um nó aleatório entre os explorados para poder visitar e os nós que sombram são guardados
             print('Ciclo de visitação')
             target = dfso.visibleStates[0]
-            move_on_edge(target.path[-1])
-            dfso.actualState = target
-            dfso.visitedStates.append(dfso.actualState.name)
-            dfso.visibleStates.popleft()
-            dfso.set_mappedStates()
-            show_mazegraph(G, dfso)
+            if target in dfso.actualState.neighbours:
+                print(f'visitando {target.name}')
+                move_on_edge(target.path[-1])
+                dfso.actualState = target
+                dfso.visitedStates.append(dfso.actualState.name)
+                dfso.visibleStates.popleft()
+                dfso.set_mappedStates()
+            else:
+                travel = True
+            
+            show_mazegraph(G, dfso)         
         
-        elif (not MazeFinished) and travel:
+        if (not MazeFinished) and travel:
             #<--- CICLO DE VIAGEM --->            
             # Executa uma "viagem" ao estado guardado e o visita
             print('Ciclo de viagem')
@@ -311,11 +317,8 @@ def mapping_maze(MAZE=MAZE, position=position):
             dfso.visitedStates.append(dfso.actualState.name)
             dfso.visibleStates.remove(target)
             dfso.set_mappedStates()
+            travel = False
             show_mazegraph(G, dfso)
-    
-        
-        else:
-            pass
 
         n = n + 1  
         print(f'{n}')
