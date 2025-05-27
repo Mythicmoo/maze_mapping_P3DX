@@ -45,6 +45,7 @@ def probe_direction():
         distances.append(distance)
     return distances
 
+#precisa de melhorias
 def probe_for_walls():
     """
     Analisa as paredes ao redor do robô e retorna uma lista indicando a presença de paredes
@@ -73,7 +74,6 @@ def probe_for_walls():
     # Retornar à orientação original
     rotate(-90 * (current_dir_index - directions.index(position[2])) + 2.3)  #2 é o erro
     return wall_detection
-
 
 def update_maze(position=position, maze=MAZE):
     """
@@ -159,24 +159,75 @@ def move_to_node(no_atual, destino):
       O nó atual é o caminho que o robo usou para chegar ao nó atual.
       O nó destino é o caminho que o usará para visitar o seu destino.
     '''
-    caminho_para_centro = no_atual[::-1]
-    for i in caminho_para_centro:
+    caminho_comum = ''
+    for c in range(len(no_atual)):
+        try:
+            if no_atual[c] == destino[c]:
+                caminho_comum = caminho_comum + destino[c]
+            else:
+                break
+        except IndexError:
+            break
     
-        if i == 'N':
-            move_on_edge('S')
-        elif i == 'E':
-            move_on_edge('W')
-        elif i == 'S':
-            move_on_edge('N')
-        elif i == 'W':
-            move_on_edge('E')
+    if caminho_comum != '':
+        if len(no_atual) > len(destino):
+            caminho_para_destino = no_atual[len(caminho_comum):][::-1]  # Caminho de volta ao ponto comum
+            for i in caminho_para_destino:
+                if i == 'N':
+                    move_on_edge('S')
+                elif i == 'E':
+                    move_on_edge('W')
+                elif i == 'S':
+                    move_on_edge('N')
+                elif i == 'W':
+                    move_on_edge('E')
+                else:
+                    print('Erro: direção inválida')
+                    break
         else:
-            print('Erro: direção inválida')
-            break 
+            caminho_para_destino = destino[len(caminho_comum):]
+            for i in caminho_para_destino:
+                move_on_edge(i)
+            
+    else:
+        caminho_para_centro = no_atual[::-1]
+        for i in caminho_para_centro:
+        
+            if i == 'N':
+                move_on_edge('S')
+            elif i == 'E':
+                move_on_edge('W')
+            elif i == 'S':
+                move_on_edge('N')
+            elif i == 'W':
+                move_on_edge('E')
+            else:
+                print('Erro: direção inválida')
+                break 
+        
+        destino_final = destino
+        for i in destino_final:
+            move_on_edge(i)            
+
+def Dijkstra_way(G, start, end):
+    G = nx.Graph(G)  # Cria uma cópia do grafo para evitar modificações indesejadas
+
+    no_i = (start.x, start.y)  # Obtém o nó inicial
+    no_f = (end.x, end.y)  # Obtém o nó final
+
+    path = nx.dijkstra_path(G, source= no_i, target= no_f)  # usa BFS internamente    
+    print(path)
+    way = []
+    for node in path:
+        way.append(G.nodes[node]["customNode"].path)
+    print(way)
     
-    destino_final = destino
-    for i in destino_final:
-        move_on_edge(i)
+    n = way[0] # Começa no primeiro caminho    
+    for path in way:
+        move_to_node(n, path)
+        n = path
+    
+
 
 def mapping_maze(MAZE=MAZE, position=position):
     '''mapeia o labirinto e retorna um grafo com as informações do labirinto'''
@@ -192,7 +243,7 @@ def mapping_maze(MAZE=MAZE, position=position):
     root_node = Node(position=position, path='', walls=update_maze())
     G.nodes[(root_node.x, root_node.y)]["customNode"] = root_node
 
-    # Cria o objeto de interação com o DSF
+    # Cria o objeto de interação com o DFS
     dfso = Dfso()
     dfso.actualState = root_node
     dfso.visitedStates.append(root_node.name)
@@ -205,8 +256,6 @@ def mapping_maze(MAZE=MAZE, position=position):
     n = 0
         
     MazeFinished = False
-
-    print(G.nodes[(7,7)]["customNode"])
 
     #<--- CICLO DE MAPEAMENTO --->
     while not MazeFinished:
@@ -292,7 +341,7 @@ def mapping_maze(MAZE=MAZE, position=position):
         
         if (not MazeFinished) and (not travel):
             #<--- CICLO DE VISITAÇÃO --->
-            # Escolhe um nó aleatório entre os explorados para poder visitar e os nós que sombram são guardados
+            # Escolhe um nó entre os explorados para poder visitar e os nós que sombram são guardados
             print('Ciclo de visitação')
             target = dfso.visibleStates[0]
             if target in dfso.actualState.neighbours:
@@ -312,7 +361,7 @@ def mapping_maze(MAZE=MAZE, position=position):
             # Executa uma "viagem" ao estado guardado e o visita
             print('Ciclo de viagem')
             target = random.choice(dfso.visibleStates)
-            move_to_node(dfso.actualState.path, target.path)
+            Dijkstra_way(G, dfso.actualState, target)
             dfso.actualState = target
             dfso.visitedStates.append(dfso.actualState.name)
             dfso.visibleStates.remove(target)
