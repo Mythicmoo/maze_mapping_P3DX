@@ -5,15 +5,35 @@ import matplotlib.pyplot as plt
 import numpy as np
 import random
 
+
 # Matriz do labirinto (definições iniciais)
 MAZE = np.array(np.zeros((15, 15)))
 position = [7 ,7 ,'E']
-
 
 def set_speed(left, right):
     left_motor.setVelocity(left)
     right_motor.setVelocity(right)
 
+def turn(direction='left', times=1, speed=1):
+    """Gira o robô para a esquerda ou direita.
+    direction: 'left' ou 'right'"""
+
+    if direction == 'left':
+        set_speed(-speed, speed)  # Motor esquerdo para trás, motor direito para frente
+    elif direction == 'right':
+        set_speed(speed, -speed)  # Motor esquerdo para frente, motor direito para trás
+    elif direction == 'front':
+        set_speed(speed, speed)
+    elif direction == 'back':
+        set_speed(-speed, -speed)
+    else:
+        raise ValueError("Direção inválida. Use 'left' ou 'right'.")
+    
+    for _ in range(times):
+        robot.step(timestep)
+    
+    set_speed(0, 0)  # Para os motores após o giro
+    
 def rotate(angle):
 
     angular_speed = 0.5908 
@@ -122,6 +142,27 @@ def show_mazegraph(G, dfso):
     plt.axis("equal")
     plt.show()
 
+def move_along_edge(traslation_time=14.17, speed=1.5):
+
+    startTime = robot.getTime()
+    while robot.getTime() - startTime < traslation_time:
+
+        d = 0
+        for _ in range(2):
+            probe = probe_direction() 
+            d = (d + probe[0] - probe[7])/2
+        
+        print(robot.getTime())
+        if -14 < d < 14:
+            turn('front', 2, speed)  # Se não houver paredes, continua em frente
+        elif (14 <= d <= 50):
+            turn('left', 1, speed)
+        elif (-50 >= d >= -14):
+            turn('right', 1, speed)        
+        else:
+            turn('front', 2, speed)  # Se não houver paredes, continua em frente
+            pass       
+
 def move_on_edge(direction):
     """
     Move o robô 2 metros na direção especificada (N, S, E ou W).
@@ -227,8 +268,6 @@ def Dijkstra_way(G, start, end):
         move_to_node(n, path)
         n = path
     
-
-
 def mapping_maze(MAZE=MAZE, position=position):
     '''mapeia o labirinto e retorna um grafo com as informações do labirinto'''
 

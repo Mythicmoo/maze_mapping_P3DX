@@ -1,9 +1,6 @@
 from bot_setup_functions import *
 
+robot.step(timestep*5)
 
-'''move_to_node('', 'ENWW')
-move_to_node('ENWW', 'EN')'''
-
-mapping_maze()
-
+#--------
 
