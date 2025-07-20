@@ -65,7 +65,6 @@ def probe_direction():
         distances.append(distance)
     return distances
 
-#precisa de melhorias
 def probe_for_walls():
     """
     Analisa as paredes ao redor do robô e retorna uma lista indicando a presença de paredes
@@ -92,7 +91,9 @@ def probe_for_walls():
         rotate(-90)
     
     # Retornar à orientação original
-    rotate(-90 * (current_dir_index - directions.index(position[2])) + 2.3)  #2 é o erro
+    rotate(-90 * (current_dir_index - directions.index(position[2])))
+    robot.step(timestep)  # Espera o robô se alinhar
+    rotate(2.2) # Ajuste fino para alinhar o robô
     return wall_detection
 
 def update_maze(position=position, maze=MAZE):
@@ -168,14 +169,23 @@ def move_on_edge(direction):
     Move o robô 2 metros na direção especificada (N, S, E ou W).
     No final da execução o robo apontara para a direção de movimento
     """
-    directions = ['N', 'E', 'S', 'W']
-    current_dir_index = directions.index(direction) # direção de movimento desejada
-    translation_time = 10.26227291 # Tempo necessário para percorrer 2 metros (distanciaDeUmPasso_emmetros/velocidade_linear)
-   
+    dir_clockwise = ['N', 'E', 'S', 'W']
+    translation_time = 10.26227291  # Tempo necessário para percorrer 2 metros
+    target_dir_index = dir_clockwise.index(direction)
+    actual_dir_index = dir_clockwise.index(position[2])
+    roll = (target_dir_index - actual_dir_index) % 4
 
-    rotate(-90 * (current_dir_index - directions.index(position[2])))
+    # aleatoriza o sentido de rotação (horário ou anti-horário)
+    clockwise = random.choice([True, False])
+    if roll != 0:
+        if clockwise:
+            angle = -90 * roll
+        else:
+            angle = 90 * (4 - roll)
+        rotate(angle)
+        rotate(0.55) if clockwise else rotate(-0.55)        
+    
     position[2] = direction
-
     #atualiza a posição do robô
     if direction == 'N':
         position[0] -= 2
@@ -191,9 +201,9 @@ def move_on_edge(direction):
     set_speed(1, 1)  # Velocidade constante
     while robot.getTime() - start_time < translation_time:
         robot.step(timestep)
-
     # Parar o robô
     set_speed(0, 0)
+
 
 def move_to_node(no_atual, destino):
     '''Move o robo para o nó destino especificado.
@@ -410,6 +420,8 @@ def mapping_maze(MAZE=MAZE, position=position):
 
         n = n + 1  
         print(f'{n}')
+        if n % 4 == 0:
+            turn('front', 1, 1)
     
 # Configurações iniciais do robô 
 robot = Robot()
