@@ -58,14 +58,37 @@ def rotate(angle):
     # Para os motores após o giro
     set_speed(0, 0)
 
-def probe_direction():
-    """Lê as medidas dos sensores."""
-    robot.step(timestep)
-    distances = []
-    for sensor in sensores:
-        distance = float('{:.1f}'.format(sensor.getValue()))
-        distances.append(distance)
-    return distances
+def probe_direction(times=0):
+    """Lê as medidas dos sensores de distância do robô.
+    Se times for 0, lê uma vez.
+    Se times for > 0, lê times vezes e retorna a média das leituras."""  
+    
+    def read_sensors():
+        """Lê as medidas dos sensores."""
+        robot.step(timestep)
+        distances = []
+        for sensor in sensores:
+            distance = float('{:.1f}'.format(sensor.getValue()))
+            distances.append(distance)
+        return distances
+    
+    if times == 0:
+        return read_sensors()
+    else:
+        distances = [0] * len(sensores)
+        readings = []
+        
+        for _ in range(times):
+            readings.append(read_sensors())        
+        for p in range(len(sensores)):
+            for q in range(times):
+                distances[p] += readings[q][p]
+        
+        distances = [d / times for d in distances]  # Média das leituras
+        
+        # Formata as distâncias para uma casa decimal
+        distances = [float('{:.1f}'.format(d)) for d in distances]
+        return distances     
 
 def probe_for_walls():
     """
@@ -81,13 +104,13 @@ def probe_for_walls():
 
     
     # Faz duas leituras médias para frente e trás
-    probe = [(a + b) / 2 for a, b in zip(probe_direction(), probe_direction())]
+    probe = probe_direction(times=3)
     probe_detection[0], probe_detection[1] = probe[0], probe[7]
 
     rotate(90)
     robot.step(timestep)
 
-    probe = [(a + b) / 2 for a, b in zip(probe_direction(), probe_direction())]
+    probe = probe_direction(times=3)
     probe_detection[2], probe_detection[3] = probe[0], probe[7]
     
     rotate(-90)
@@ -315,64 +338,23 @@ def dijkstra_way(G, start, end):
         move_to_node(n, path)
         n = path
 
-def ajust_position(ciclos=None):   
+def ajust_position(ciclos=1):
 
-    j = 0
-    n = 0
-    sum3 = 0
-    sum4 = 0
-    next_mean3 = 0
-    next_mean4 = 0
-
-    while j < 171: # numero de iterações para uma volta completa
+    n_ciclos = ciclos*672
+    while n_ciclos < 672: # numero de iterações para uma volta completa
         
-        turn('left', 1, 2)
+        turn('left', 1, 0.5)
         
-        probe1 = probe_direction()
-        prpbe2 = probe_direction()
-        probe3 = [a + b for a, b in zip(probe1, prpbe2)]
-        probe = [x / 2 for x in probe3]  # Média dos dois probes
+        probe = probe_direction(times=5)
 
         if (probe[3] > 954) and (probe[4] > 954): #Numeros experimentais
-            turn('back', 1, 0.5)
-        elif (800 < probe[3] < 954) and (800 < probe[4] < 954):
+            turn('back', 1, 1)
+        elif (750 < probe[3] < 954) and (750 < probe[4] < 954):
             turn('front', 1, 1)
 
+        n_ciclos += 1
 
-        if j == 170:
-
-            if n == 1:
-                mean3 = 0
-                mean4 = 0
-                next_mean3 = sum3 / j
-                next_mean4 = sum4 / j
-            else:
-
-                # Criterio de parada
-                if ciclos is not None and n >= ciclos*170:
-                    print('Criterio de parada atingido')
-                    break
-
-                mean3 = next_mean3
-                mean4 = next_mean4
-                next_mean3 = sum3 / j
-                next_mean4 = sum4 / j
-
-                if (mean3 - 2) <= next_mean3 <= (mean3 + 2) and (mean4 - 2) <= next_mean4 <= (mean4 + 2):
-                    print(mean3, mean4, next_mean3, next_mean4)
-                    print('Ajuste de posição concluído')
-                    break             
-                else:
-                    j = 0
-                    sum3 = 0
-                    sum4 = 0
-        else:
-            sum3 = sum3 + probe[3]
-            sum4 = sum4 + probe[4]
-            j = j + 1
     
-        n = n + 1 # numero de ciclos
-
 def mapping_maze(MAZE=MAZE, position=position):
     '''mapeia o labirinto e retorna um grafo com as informações do labirinto'''
 
@@ -459,7 +441,7 @@ def mapping_maze(MAZE=MAZE, position=position):
                         new_ways = True
                     
                 else:
-                    print('caminho bloquedo')
+                    raise Exception('Caminho bloqueado')
             show_mazegraph(G, dfso)
             
         
