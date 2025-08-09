@@ -12,10 +12,18 @@ class Node:
     
 
     def __repr__(self):
-        return f"Node[({self.x},{self.y}) ; {self.path} ; {self.neighbours} ; {self.walls}]"
+        return f'''Node({self.x},{self.y}) 
+                   |{self.path}
+                   |{self.neighbours}
+                   |{self.walls}]
+                   =====================>'''
 
     def __str__(self):
-        return f"Node[({self.x}, {self.y}) ; {self.path} ; {self.neighbours} ; {self.walls}]"
+        return f'''Node({self.x},{self.y}) 
+                   |{self.path}
+                   |{self.neighbours}
+                   |{self.walls}]
+                   |=====================>'''
     
 
 class Dfso:

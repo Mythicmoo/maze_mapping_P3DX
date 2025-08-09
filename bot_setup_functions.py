@@ -340,8 +340,9 @@ def dijkstra_way(G, start, end):
 
 def ajust_position(ciclos=1):
 
+    n = 0
     n_ciclos = ciclos*672
-    while n_ciclos < 672: # numero de iterações para uma volta completa
+    while n < n_ciclos: # numero de iterações para uma volta completa
         
         turn('left', 1, 0.5)
         
@@ -352,9 +353,13 @@ def ajust_position(ciclos=1):
         elif (750 < probe[3] < 954) and (750 < probe[4] < 954):
             turn('front', 1, 1)
 
-        n_ciclos += 1
+        n += 1
 
-    
+def is_L_shapedWalls(walls):
+    l_shaped_patterns = {(0, 0, 1, 1), (0, 1, 1, 0), (1, 1, 0, 0), (1, 0, 0, 1)}
+    if tuple(walls) in l_shaped_patterns:
+        return True
+
 def mapping_maze(MAZE=MAZE, position=position):
     '''mapeia o labirinto e retorna um grafo com as informações do labirinto'''
 
@@ -372,8 +377,7 @@ def mapping_maze(MAZE=MAZE, position=position):
     # Cria o objeto de interação com o DFS
     dfso = Dfso()
     dfso.actualState = root_node
-    dfso.visitedStates.append(root_node.name)
-    
+    dfso.visitedStates.append(root_node.name)    
 
     #direções absolutas
     directions = ['N', 'E', 'S', 'W']
@@ -385,7 +389,7 @@ def mapping_maze(MAZE=MAZE, position=position):
 
     #<--- CICLO DE MAPEAMENTO --->
     while not MazeFinished:
-        print('Ciclo de mapeamento')
+        print('<======[Ciclo de mapeamento]======>')
 
         #<--- CICLO DE EXPLORAÇÂO --->
         # Checar se exitem caminhos explorados
@@ -405,6 +409,7 @@ def mapping_maze(MAZE=MAZE, position=position):
         if not new_ways:             
             # mapear novos caminhos
             walls = update_maze(position=position.copy(), maze=MAZE)
+            print(walls, 'Aqui')
             moves = [(-1, 0), (0, 1), (1, 0), (0, -1)]  # N, E, S, W
             for i, (dx, dy) in enumerate(moves):
                 if walls[i] == 0:
@@ -413,12 +418,13 @@ def mapping_maze(MAZE=MAZE, position=position):
                     
                     try:
                         if G.nodes[(next_position[0], next_position[1])]["customNode"].name not in dfso.visitedStates:
-                            new_node = Node(position=next_position, path=dfso.actualState.path + directions[i], walls=walls)
+                            new_node = Node(position=next_position, path=dfso.actualState.path + directions[i])
                             
                             #atualizar dfso
                             dfso.visibleStates.appendleft(new_node)
                             dfso.set_mappedStates()
                             dfso.actualState.neighbours.add(new_node)
+                            dfso.actualState.walls = walls
                             new_node.neighbours.add(dfso.actualState)
 
                             G.nodes[(new_node.x, new_node.y)]["customNode"] = new_node
@@ -426,13 +432,13 @@ def mapping_maze(MAZE=MAZE, position=position):
 
                         new_ways = True
                     except KeyError:
-
-                        new_node = Node(position=next_position, path=dfso.actualState.path + directions[i], walls=walls)
+                        new_node = Node(position=next_position, path=dfso.actualState.path + directions[i])
                             
                         #atualizar dfso
                         dfso.visibleStates.appendleft(new_node)
                         dfso.set_mappedStates()
                         dfso.actualState.neighbours.add(new_node)
+                        dfso.actualState.walls = walls
                         new_node.neighbours.add(dfso.actualState)
 
                         G.nodes[(new_node.x, new_node.y)]["customNode"] = new_node
@@ -441,14 +447,15 @@ def mapping_maze(MAZE=MAZE, position=position):
                         new_ways = True
                     
                 else:
-                    raise Exception('Caminho bloqueado')
+                    print(f"parede ao {directions[i]}")
             show_mazegraph(G, dfso)
             
         
             # if True (Caminhos novos mapeados com sucesso):
             if new_ways:
-                # ir para o ciclo de visitação
-                pass
+                # atualizar posição e ir para o ciclo de visitação
+                dfso.actualState.walls = walls
+
             # else (não há caminhos novos):
             else:
                 print('não há caminhos novos')                
@@ -463,12 +470,16 @@ def mapping_maze(MAZE=MAZE, position=position):
                     else:            
                         # parar o robô e finalizar o programa
                         MazeFinished = True
-         
+        
+        #<--- CICLO DE AJUSTE --->
+        if is_L_shapedWalls(dfso.actualState.walls) and n > 2:
+            ajust_position()
+
         
         if (not MazeFinished) and (not travel):
             #<--- CICLO DE VISITAÇÃO --->
             # Escolhe um nó entre os explorados para poder visitar e os nós que sombram são guardados
-            print('Ciclo de visitação')
+            print('<======[Ciclo de visitação]======>')
             target = dfso.visibleStates[0]
             if target in dfso.actualState.neighbours:
                 print(f'visitando {target.name}')
@@ -478,15 +489,16 @@ def mapping_maze(MAZE=MAZE, position=position):
                 dfso.visibleStates.popleft()
                 dfso.set_mappedStates()
             else:
-                travel = True
-            
-            show_mazegraph(G, dfso)         
+                travel = True            
+            show_mazegraph(G, dfso)
+
         
         if (not MazeFinished) and travel:
             #<--- CICLO DE VIAGEM --->            
             # Executa uma "viagem" ao estado guardado e o visita
-            print('Ciclo de viagem')
-            target = random.choice(dfso.visibleStates)
+            print('<======[Ciclo de viagem]======>')
+            target = dfso.visibleStates[0]
+            print(f'viajando para {target.name}')
             dijkstra_way(G, dfso.actualState, target)
             dfso.actualState = target
             dfso.visitedStates.append(dfso.actualState.name)
@@ -494,6 +506,8 @@ def mapping_maze(MAZE=MAZE, position=position):
             dfso.set_mappedStates()
             travel = False
             show_mazegraph(G, dfso)
+
+            
 
         n = n + 1  
         print(f'{n}')
