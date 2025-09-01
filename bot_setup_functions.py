@@ -13,10 +13,11 @@ _maze_fig = None
 _maze_ax = None
 
 def set_speed(left, right):
+    # left e right são as velocidades lineares das rodas em (m/s)
     left_motor.setVelocity(left)
     right_motor.setVelocity(right)
 
-def turn(direction='left', times=1, speed=1):
+def turn(direction='left', times=1, speed=1, stop=True):
     """Gira o robô para a esquerda ou direita.
     direction: 'left' ou 'right'"""
 
@@ -34,11 +35,12 @@ def turn(direction='left', times=1, speed=1):
     for _ in range(times):
         robot.step(timestep)
     
-    set_speed(0, 0)  # Para os motores após o giro
-    
+    if stop:
+        set_speed(0, 0)  # Para os motores após o giro
+
 def rotate(angle):
 
-    angular_speed = 0.5908 
+    angular_speed = 0.5908 # velocidade angular do robo (rad/s)
     angle_rad = np.radians(angle)  # Converte o ângulo para radianos
 
     # Tempo necessário para girar o ângulo desejado
@@ -58,39 +60,29 @@ def rotate(angle):
     # Para os motores após o giro
     set_speed(0, 0)
 
-def probe_direction(times=0):
+def probe_direction(times=0, decimmals=1):
     """Lê as medidas dos sensores de distância do robô.
-    Se times for 0, lê uma vez.
-    Se times for > 0, lê times vezes e retorna a média das leituras."""  
-    
+    Parâmetros:
+        times (int): Número de leituras a serem feitas. Se 0, lê uma vez; se > 0, lê 'times' vezes e retorna a média.
+    Retorna:
+        list[float]: Lista de distâncias lidas dos sensores, na ordem [so0, so1, so2, so3, so4, so5, so6, so7].
+    """
     def read_sensors():
-        """Lê as medidas dos sensores."""
         robot.step(timestep)
-        distances = []
-        for sensor in sensores:
-            distance = float('{:.1f}'.format(sensor.getValue()))
-            distances.append(distance)
-        return distances
-    
-    if times == 0:
+        return [float(sensor.getValue()) for sensor in sensores]
+
+    if times == 0 or times == 1:
         return read_sensors()
     else:
-        distances = [0] * len(sensores)
-        readings = []
-        
-        for _ in range(times):
-            readings.append(read_sensors())        
-        for p in range(len(sensores)):
-            for q in range(times):
-                distances[p] += readings[q][p]
-        
-        distances = [d / times for d in distances]  # Média das leituras
-        
-        # Formata as distâncias para uma casa decimal
-        distances = [float('{:.1f}'.format(d)) for d in distances]
-        return distances     
+        # Pré-alocar matriz numpy para leituras rápidas e operações vetorizadas
+        readings = np.zeros((times, len(sensores)))
+        for i in range(times):
+            readings[i] = read_sensors()
+        # Calcula a média por sensor e arredonda
+        distances = np.round(np.mean(readings, axis=0), decimmals)
+        return distances.tolist()
 
-def probe_for_walls():
+def probe_for_walls(): 
     """
     Analisa as paredes ao redor do robô e retorna uma lista indicando a presença de paredes
     em relação às direções absolutas do labirinto [N, E, S, W].
@@ -98,6 +90,7 @@ def probe_for_walls():
     directions = ['N', 'E', 'S', 'W']  # Ordem fixa das direções absolutas
     wall_detection = [0, 0, 0, 0]  # Inicializar detecção de paredes
     probe_detection = [0, 0, 0, 0]
+    min_return = 920
 
     # Identificar o índice da direção atual no labirinto
     current_dir_index = directions.index(position[2])
@@ -118,50 +111,50 @@ def probe_for_walls():
 
     if current_dir_index == 0: # Direcionamento Norte
 
-        if probe_detection[0] >= 930:
+        if probe_detection[0] >= min_return:
             wall_detection[3] = 1 #Oeste
-        if probe_detection[1] >= 930:
+        if probe_detection[1] >= min_return:
             wall_detection[1] = 1 #Leste
         
-        if probe_detection[2] >= 930:
+        if probe_detection[2] >= min_return:
             wall_detection[2] = 1 #Sul
-        if probe_detection[3] >= 930:
+        if probe_detection[3] >= min_return:
             wall_detection[0] = 1 #Norte
 
     elif current_dir_index == 1: # Direcionamento Leste
         
-        if probe_detection[0] >= 930:
+        if probe_detection[0] >= min_return:
             wall_detection[0] = 1 #Norte
-        if probe_detection[1] >= 930:
+        if probe_detection[1] >= min_return:
             wall_detection[2] = 1 #Sul
         
-        if probe_detection[2] >= 930:
+        if probe_detection[2] >= min_return:
             wall_detection[3] = 1 #Oeste
-        if probe_detection[3] >= 930:
+        if probe_detection[3] >= min_return:
             wall_detection[1] = 1 #Leste
 
     elif current_dir_index == 2: # Direcionamento Sul
         
-        if probe_detection[0] >= 930:
+        if probe_detection[0] >= min_return:
             wall_detection[1] = 1 #Leste
-        if probe_detection[1] >= 930:   
+        if probe_detection[1] >= min_return:   
             wall_detection[3] = 1 #Oeste
 
-        if probe_detection[2] >= 930:
+        if probe_detection[2] >= min_return:
             wall_detection[0] = 1 #Norte
-        if probe_detection[3] >= 930:
+        if probe_detection[3] >= min_return:
             wall_detection[2] = 1 #Sul
 
     elif current_dir_index == 3: # Direcionamento Oeste
         
-        if probe_detection[0] >= 930:
+        if probe_detection[0] >= min_return:
             wall_detection[2] = 1 #Sul
-        if probe_detection[1] >= 930:
+        if probe_detection[1] >= min_return:
             wall_detection[0] = 1 #Norte
 
-        if probe_detection[2] >= 930:
+        if probe_detection[2] >= min_return:
             wall_detection[1] = 1 #Leste
-        if probe_detection[3] >= 930:
+        if probe_detection[3] >= min_return:
             wall_detection[3] = 1 #Oeste     
     
     
@@ -327,38 +320,119 @@ def dijkstra_way(G, start, end):
     no_f = (end.x, end.y)  # Obtém o nó final
 
     path = nx.dijkstra_path(G, source= no_i, target= no_f)  # usa BFS internamente    
-    print(path)
     way = []
+
     for node in path:
         way.append(G.nodes[node]["customNode"].path)
-    print(way)
     
-    n = way[0] # Começa no primeiro caminho    
-    for path in way:
+    print(way)    
+    n = way[0] # Começa no primeiro caminho
+
+    for c, path in enumerate(way):
         move_to_node(n, path)
         n = path
 
-def ajust_position(ciclos=1):
-
+def ajust_position(ciclos=1, metodo=1):
     n = 0
     n_ciclos = ciclos*672
-    while n < n_ciclos: # numero de iterações para uma volta completa
+    clockwise = random.choice([True, False])
+    # Para paredes em L ou U
+    if metodo == 1:
+        while n < n_ciclos: # numero de iterações para uma volta completa
+
+            if n % 672 == 0:
+                if clockwise == True:
+                    clockwise = False
+                else:
+                    clockwise = True
+            
+            if clockwise:
+                turn('right', 1, 0.5)
+            else:
+                turn('left', 1, 0.5)
+            
+            probe = probe_direction(times=5, decimmals=2)
+            
+            if (probe[3] > 954) and (probe[4] > 954): #Numeros experimentais
+                turn('back', 1, 1)
+            elif (850 < probe[3] < 954) and (850 < probe[4] < 954):
+                turn('front', 1, 1)
+
+            n += 1
+    # Para paredes em H
+    elif metodo == 2:
+        while n < n_ciclos: # numero de iterações para uma volta completa
+
+            if n % 672 == 0:
+                if clockwise == True:
+                    clockwise = False
+                else:
+                    clockwise = True
+            
+            if clockwise:
+                turn('right', 1, 0.5)
+            else:
+                turn('left', 1, 0.5)
+            
+            probe = probe_direction(times=5, decimmals=2)
+
+            if (probe[3] > 954) and (probe[4] > 954): #Numeros experimentais
+                turn('back', 1, 1)
+            elif (900 < probe[3] < 954) and (900 < probe[4] < 954):
+                turn('front', 1, 1)
+
+            n += 1
+    elif metodo == 3:
+    
+        max_value = 0
+        actual_value = 0
         
-        turn('left', 1, 0.5)
-        
-        probe = probe_direction(times=5)
+        # gira 360 graus procurando o valor máximo
+        while n < 672:
+            if clockwise:
+                turn('right', 1, 0.5)
+            else:
+                turn('left', 1, 0.5)
+            
+            probe = probe_direction(times=30, decimmals=4)
+            if probe[0] > max_value:                
+                max_value = probe[0]            
+            n += 1
+        print(f'Valor máximo encontrado: {max_value}')
 
-        if (probe[3] > 954) and (probe[4] > 954): #Numeros experimentais
-            turn('back', 1, 1)
-        elif (750 < probe[3] < 954) and (750 < probe[4] < 954):
-            turn('front', 1, 1)
+        # inverte o sentido de rotação
+        if clockwise == True:
+            clockwise = False
+        else:
+            clockwise = True
+            
+        # gira até encontrar o valor máximo
+        while True:
+            probe = probe_direction(times=30, decimmals=4)
+            actual_value = probe[0]
+            if abs(actual_value - max_value) > 1:
+                if clockwise:
+                    turn('right', 1, 0.5)
+                else:
+                    turn('left', 1, 0.5)
+            else:
+                print('Alinhado')
+                print(f'Valor atual: {actual_value}')
+                break
 
-        n += 1
-
-def is_L_shapedWalls(walls):
+def walls_in_shapeOf(walls, shape='L'):
     l_shaped_patterns = {(0, 0, 1, 1), (0, 1, 1, 0), (1, 1, 0, 0), (1, 0, 0, 1)}
-    if tuple(walls) in l_shaped_patterns:
-        return True
+    U_shaped_patterns = {(0, 1, 1, 1), (1, 1, 1, 0), (1, 1, 0, 1), (1, 0, 1, 1)}
+    H_shaped_patterns = {(1, 0, 1, 0), (0, 1, 0, 1)}
+    if shape == 'L':
+        if tuple(walls) in l_shaped_patterns:
+            return True
+    elif shape == 'U':
+        if tuple(walls) in U_shaped_patterns:
+            return True
+    elif shape == 'H':
+        if tuple(walls) in H_shaped_patterns:
+            return True
 
 def mapping_maze(MAZE=MAZE, position=position):
     '''mapeia o labirinto e retorna um grafo com as informações do labirinto'''
@@ -472,9 +546,9 @@ def mapping_maze(MAZE=MAZE, position=position):
                         MazeFinished = True
         
         #<--- CICLO DE AJUSTE --->
-        if is_L_shapedWalls(dfso.actualState.walls) and n > 2:
-            ajust_position()
-
+        if walls_in_shapeOf(dfso.actualState.walls, 'L') and n > 2 and n % 2 == 0:
+            ajust_position(ciclos=2, metodo=1)
+        
         
         if (not MazeFinished) and (not travel):
             #<--- CICLO DE VISITAÇÃO --->
@@ -506,7 +580,6 @@ def mapping_maze(MAZE=MAZE, position=position):
             dfso.set_mappedStates()
             travel = False
             show_mazegraph(G, dfso)
-
             
 
         n = n + 1  
@@ -514,15 +587,22 @@ def mapping_maze(MAZE=MAZE, position=position):
     
 # Configurações iniciais do robô 
 robot = Robot()
-timestep = int(robot.getBasicTimeStep())   
+timestep = int(robot.getBasicTimeStep())
+# parâmetros físicos do robo
+D = 0.3216  # diâmetro do robô (m)
+d = 0.19 # diametro das rodas (m)
 
-# Inicializar motores e sensores
+# Inicializar motores
 left_motor = robot.getDevice('left wheel')
 right_motor = robot.getDevice('right wheel')
 left_motor.setPosition(float('inf'))
 right_motor.setPosition(float('inf'))
 left_motor.setVelocity(0)
 right_motor.setVelocity(0)
+
+# inicializa sensores
+left_pos_sensor = robot.getDevice('left wheel sensor')   
+right_pos_sensor = robot.getDevice('right wheel sensor')
 so0 = robot.getDevice('so0')
 so1 = robot.getDevice('so1')
 so2 = robot.getDevice('so2')
@@ -531,6 +611,8 @@ so4 = robot.getDevice('so4')
 so5 = robot.getDevice('so5')
 so6 = robot.getDevice('so6')
 so7 = robot.getDevice('so7')
+left_pos_sensor.enable(timestep)
+right_pos_sensor.enable(timestep)
 sensores = [so0, so1, so2, so3, so4, so5, so6, so7]
 for sensor in sensores:
     sensor.enable(timestep)
