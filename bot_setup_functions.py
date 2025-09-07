@@ -60,27 +60,68 @@ def rotate(angle):
     # Para os motores após o giro
     set_speed(0, 0)
 
-def probe_direction(times=0, decimmals=1):
-    """Lê as medidas dos sensores de distância do robô.
-    Parâmetros:
-        times (int): Número de leituras a serem feitas. Se 0, lê uma vez; se > 0, lê 'times' vezes e retorna a média.
-    Retorna:
-        list[float]: Lista de distâncias lidas dos sensores, na ordem [so0, so1, so2, so3, so4, so5, so6, so7].
-    """
-    def read_sensors():
-        robot.step(timestep)
-        return [float(sensor.getValue()) for sensor in sensores]
+def Rotate(angle, linear_speed=1):
+    # 0.5908 is the robot's angular speed in rad/s, used to calculate the turning radius (r)
+    r = 1 / 0.5908  # raio de giro do robo (m)
+    speed = linear_speed
+    angular_speed = linear_speed / r # velocidade angular do robo (rad/s)
+    angle_rad = np.radians(angle)  # Converte o ângulo para radianos
+    
+    # Executa o giro pelo tempo necessário
+    
+    DA = 0
+    A = angle_rad
+    errorIntegral = 0
+    start_time = robot.getTime()
+    Kp = 5
+    Ki = 0.2
+    while True: # gira até completar o ângulo desejado (com margem de erro de 1 grau)    
 
-    if times == 0 or times == 1:
-        return read_sensors()
-    else:
-        # Pré-alocar matriz numpy para leituras rápidas e operações vetorizadas
-        readings = np.zeros((times, len(sensores)))
-        for i in range(times):
-            readings[i] = read_sensors()
-        # Calcula a média por sensor e arredonda
-        distances = np.round(np.mean(readings, axis=0), decimmals)
-        return distances.tolist()
+        # Configura a direção do giro
+        if angle > 0:  # Sentido anti-horário
+            set_speed(-speed, speed)
+        else:  # Sentido horário
+            set_speed(speed, -speed)
+        robot.step(timestep)
+
+        angular_speed = speed / r # velocidade angular do robo (rad/s)
+        t = robot.getTime() - start_time # Tempo decorrido
+        dt = timestep / 1000  # Converte o timestep para segundos
+
+        
+        DA = DA + angular_speed * dt  # Ângulo girado até agora
+        A = angle_rad - abs(DA) # Ângulo restante para girar
+
+        # speed = speed * (1 - 0.0255*(DA/angle_rad)) + 1*DA*speed # Limite inferior de velocidade para evitar reversão ou parada
+        angleError = angle_rad - DA
+        errorIntegral = errorIntegral + angleError*dt
+        speed = (Kp * angleError + Ki * errorIntegral)/angle_rad
+        
+
+        print(f'Remaining: {np.degrees(A):.2f}°, Rotated: {np.degrees(DA):.2f}°, Speed: {speed:.2f} m/s')
+        
+         
+
+    # Para os motores após o giro
+    set_speed(0, 0)
+
+def probe_direction(times=0, decimals=1):
+    """
+    Lê as medidas dos sensores de distância do robô.
+    """
+    n_sensors = len(sensores)
+
+    if times <= 0:
+        robot.step(timestep)
+        return [sensor.getValue() for sensor in sensores]
+
+    readings = np.empty((times, n_sensors), dtype=float)
+
+    for i in range(times):
+        robot.step(timestep)
+        readings[i] = [sensor.getValue() for sensor in sensores]
+
+    return np.round(readings.mean(axis=0), decimals).tolist()
 
 def probe_for_walls(): 
     """
@@ -351,7 +392,7 @@ def ajust_position(ciclos=1, metodo=1):
             else:
                 turn('left', 1, 0.5)
             
-            probe = probe_direction(times=5, decimmals=2)
+            probe = probe_direction(times=5, decimals=2)
             
             if (probe[3] > 954) and (probe[4] > 954): #Numeros experimentais
                 turn('back', 1, 1)
@@ -546,7 +587,8 @@ def mapping_maze(MAZE=MAZE, position=position):
                         MazeFinished = True
         
         #<--- CICLO DE AJUSTE --->
-        if walls_in_shapeOf(dfso.actualState.walls, 'L') and n > 2 and n % 2 == 0:
+        ajust_condition = (walls_in_shapeOf(dfso.actualState.walls, 'L') or walls_in_shapeOf(dfso.actualState.walls, 'U')) and n > 2 and n % 2 == 0
+        if ajust_condition:
             ajust_position(ciclos=2, metodo=1)
         
         
@@ -588,9 +630,7 @@ def mapping_maze(MAZE=MAZE, position=position):
 # Configurações iniciais do robô 
 robot = Robot()
 timestep = int(robot.getBasicTimeStep())
-# parâmetros físicos do robo
-D = 0.3216  # diâmetro do robô (m)
-d = 0.19 # diametro das rodas (m)
+
 
 # Inicializar motores
 left_motor = robot.getDevice('left wheel')
