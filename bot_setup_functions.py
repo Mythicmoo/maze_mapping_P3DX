@@ -38,7 +38,7 @@ def turn(direction='left', times=1, speed=1, stop=True):
     if stop:
         set_speed(0, 0)  # Para os motores após o giro
 
-def rotate(angle):
+'''def rotate(angle):
 
     angular_speed = 0.5908 # velocidade angular do robo (rad/s)
     angle_rad = np.radians(angle)  # Converte o ângulo para radianos
@@ -58,24 +58,30 @@ def rotate(angle):
         robot.step(timestep)
 
     # Para os motores após o giro
-    set_speed(0, 0)
+    set_speed(0, 0)'''
 
-def Rotate(angle, linear_speed=1):
+#TODO: move_on_edge com controlade PID (incompleto: não adaptar)
+def rotate(angle, linear_speed=1):
+
     # 0.5908 is the robot's angular speed in rad/s, used to calculate the turning radius (r)
     r = 1 / 0.5908  # raio de giro do robo (m)
     speed = linear_speed
     angular_speed = linear_speed / r # velocidade angular do robo (rad/s)
-    angle_rad = np.radians(angle)  # Converte o ângulo para radianos
+
+    if angle > 0:
+        angle_rad = abs(np.radians(angle+1.152))  # Converte o ângulo para radianos
+    else:
+        angle_rad = abs(np.radians(angle-1.152))  # Converte o ângulo para radianos
     
-    # Executa o giro pelo tempo necessário
-    
+    dt = timestep / 1000  # Converte o timestep para segundos        
     DA = 0
-    A = angle_rad
     errorIntegral = 0
-    start_time = robot.getTime()
-    Kp = 5
-    Ki = 0.2
-    while True: # gira até completar o ângulo desejado (com margem de erro de 1 grau)    
+    start_time = robot.getTime()    
+    Kp = 3
+    Kd = 1
+    Ki = 0.0001
+
+    while True: # gira até completar o ângulo desejado    
 
         # Configura a direção do giro
         if angle > 0:  # Sentido anti-horário
@@ -86,28 +92,25 @@ def Rotate(angle, linear_speed=1):
 
         angular_speed = speed / r # velocidade angular do robo (rad/s)
         t = robot.getTime() - start_time # Tempo decorrido
-        dt = timestep / 1000  # Converte o timestep para segundos
-
         
         DA = DA + angular_speed * dt  # Ângulo girado até agora
-        A = angle_rad - abs(DA) # Ângulo restante para girar
-
-        # speed = speed * (1 - 0.0255*(DA/angle_rad)) + 1*DA*speed # Limite inferior de velocidade para evitar reversão ou parada
+        dA = angular_speed * dt  # Incremento do ângulo girado
         angleError = angle_rad - DA
         errorIntegral = errorIntegral + angleError*dt
-        speed = (Kp * angleError + Ki * errorIntegral)/angle_rad
-        
+        speed = (Kp * angleError + Ki * errorIntegral + Kd * dA)/angle_rad        
 
-        print(f'Remaining: {np.degrees(A):.2f}°, Rotated: {np.degrees(DA):.2f}°, Speed: {speed:.2f} m/s')
-        
-         
+        print(f'Remaining:{np.degrees(angleError):.4f}°,Rotated:{DA:.4f} | Speed:{speed:.2f} m/s,Time: {t:.2f}s')
+
+        if abs(angleError) <= 0.00001: # Finaliza o giro ao completar o ângulo ou após 10 segundos
+            break
 
     # Para os motores após o giro
     set_speed(0, 0)
 
 def probe_direction(times=0, decimals=1):
     """
-    Lê as medidas dos sensores de distância do robô.
+    Realiza leituras dos sensores de distância e retorna a média das leituras.
+    times: número de leituras a serem feitas (0 para uma única leitura)
     """
     n_sensors = len(sensores)
 
@@ -256,13 +259,15 @@ def show_mazegraph(G, dfso):
     _maze_fig.canvas.draw()
     _maze_fig.canvas.flush_events()       
 
-def move_on_edge(direction):
+#TODO: move_on_edge com controlade PID (incompleto: não adaptar)
+def move_on_edge(direction, step_distance=10.91581, linear_speed=1.0, freeMove=False):
+    #10.3467
     """
     Move o robô 2 metros na direção especificada (N, S, E ou W).
     No final da execução o robo apontara para a direção de movimento
     """
+    
     dir_clockwise = ['N', 'E', 'S', 'W']
-    translation_time = 10.26227291  # Tempo necessário para percorrer 1 metros
     target_dir_index = dir_clockwise.index(direction)
     actual_dir_index = dir_clockwise.index(position[2])
     roll = (target_dir_index - actual_dir_index) % 4
@@ -276,23 +281,45 @@ def move_on_edge(direction):
             angle = 90 * (4 - roll)
         rotate(angle)       
     
-    position[2] = direction
-    #atualiza a posição do robô
-    if direction == 'N':
-        position[0] -= 2
-    elif direction == 'E':
-        position[1] += 2
-    elif direction == 'S':
-        position[0] += 2
-    elif direction == 'W':
-        position[1] -= 2
-    
+    if not freeMove:
+        position[2] = direction
+        #atualiza a posição do robô
+        if direction == 'N':
+            position[0] -= 2
+        elif direction == 'E':
+            position[1] += 2
+        elif direction == 'S':
+            position[0] += 2
+        elif direction == 'W':
+            position[1] -= 2    
+
+
     # Movimentar para frente
-    # erro 0,002138m
+    speed = linear_speed
+    distanceError = 0
+    integralError = 0
     start_time = robot.getTime()
-    set_speed(1, 1)  # Velocidade constante
-    while robot.getTime() - start_time < translation_time:
+    dt = timestep / 1000
+    DL = 0
+    Kp = 12
+    Kd = 5
+    Ki = 0.0001
+
+    while True:
+        set_speed(speed, speed) 
         robot.step(timestep)
+        t = robot.getTime() - start_time
+
+        DL = DL + speed * dt
+        dL = speed * dt
+        distanceError = step_distance - DL
+        integralError = integralError + distanceError*dt
+        speed = (Kp * distanceError + Ki * integralError + Kd * dL)/step_distance
+
+        #print(f'Remaining:{np.degrees(distanceError):.4f}, Walked:{DL:.4f} | Speed:{speed:.2f} m/s,Time: {t:.2f}s')
+
+        if abs(distanceError) <= 0.00001:
+            break
     # Parar o robô
     set_speed(0, 0)
 
@@ -587,9 +614,9 @@ def mapping_maze(MAZE=MAZE, position=position):
                         MazeFinished = True
         
         #<--- CICLO DE AJUSTE --->
-        ajust_condition = (walls_in_shapeOf(dfso.actualState.walls, 'L') or walls_in_shapeOf(dfso.actualState.walls, 'U')) and n > 2 and n % 2 == 0
+        '''ajust_condition = (walls_in_shapeOf(dfso.actualState.walls, 'L') or walls_in_shapeOf(dfso.actualState.walls, 'U')) and n > 2 and n % 2 == 0
         if ajust_condition:
-            ajust_position(ciclos=2, metodo=1)
+            ajust_position(ciclos=2, metodo=1)'''
         
         
         if (not MazeFinished) and (not travel):
@@ -656,5 +683,4 @@ right_pos_sensor.enable(timestep)
 sensores = [so0, so1, so2, so3, so4, so5, so6, so7]
 for sensor in sensores:
     sensor.enable(timestep)
-
 
